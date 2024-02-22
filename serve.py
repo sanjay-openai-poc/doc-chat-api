@@ -11,6 +11,8 @@ from utils import (
 from retriever import get_retrieval_chain
 from contextlib import asynccontextmanager
 
+from fastapi.middleware.cors import CORSMiddleware
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,12 +20,24 @@ async def lifespan(app: FastAPI):
     yield
     print("Server Shutting down")
 
-
 app = FastAPI(
     title="LangChain Server",
     version="1.0",
     description="A simple api server using Langchain's Runnable interfaces",
     lifespan=lifespan,
+)
+
+origins = [
+    "http://localhost",
+    "http://localhost:3000"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -72,7 +86,7 @@ async def set_url_context(context: UrlContext):
 # TODO: Identify file type and parse accordingly
 
 @app.post("/set/context/file")
-async def upload_file_with_json_data(file: UploadFile):
+async def upload_file_context(file: UploadFile):
     try:
         docs = process_file_and_get_docs(file)
         context_id, embeddings = get_context_and_embeddings(docs).values()
