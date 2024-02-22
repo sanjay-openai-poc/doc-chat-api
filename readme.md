@@ -1,3 +1,9 @@
+### Prerequisite
+You must acquire an OpenAI API key to start the project. \
+Set the api key in a **.env** file \
+`OPENAI_API_KEY="sk-<YOUR-API-KEY>"`
+
+
 #### Steps to run the app
 Install Python v3.9 to v3.11
 
