@@ -1,5 +1,4 @@
-from fastapi import FastAPI, UploadFile, Form, File
-from typing import Annotated
+from fastapi import FastAPI, UploadFile, HTTPException
 
 from models.Query import Query
 from models.UrlContext import UrlContext
@@ -20,17 +19,14 @@ async def lifespan(app: FastAPI):
     yield
     print("Server Shutting down")
 
+
 app = FastAPI(
-    title="LangChain Server",
+    title="Document Chat API",
     version="1.0",
-    description="A simple api server using Langchain's Runnable interfaces",
     lifespan=lifespan,
 )
 
-origins = [
-    "http://localhost",
-    "http://localhost:3000"
-]
+origins = ["http://localhost", "http://localhost:3000", "http://localhost:3001"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,7 +35,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 persistent_store = {}
 
@@ -62,9 +57,13 @@ async def query_doc(query: Query):
             else:
                 return f"Could not find context for the provided context_id: {query.context_id}"
         else:
-            return "Invalid Query, must include context_id"
+            raise HTTPException(
+                status_code=404, detail="Invalid Query, must include context_id"
+            )
+    except HTTPException as http_exception:
+        raise http_exception
     except Exception as e:
-        return f"Exception occurred: {e}"
+        raise HTTPException(status_code=500, detail=f"{e}")
 
 
 @app.post("/set/context/url")
@@ -78,12 +77,15 @@ async def set_url_context(context: UrlContext):
 
             return {"message": "Context set successfully", "context_id": context_id}
         else:
-            return f"Cound not retrieve documents from: {context.value}"
+            raise HTTPException(
+                status_code=404,
+                detail=f"Cound not retrieve documents from: {context.value}",
+            )
+    except HTTPException as http_exception:
+        raise http_exception
     except Exception as e:
-        return f"Exception occurred: {e}"
+        raise HTTPException(status_code=500, detail=f"{e}")
 
-
-# TODO: Identify file type and parse accordingly
 
 @app.post("/set/context/file")
 async def upload_file_context(file: UploadFile):
@@ -97,7 +99,7 @@ async def upload_file_context(file: UploadFile):
             "context_id": context_id,
         }
     except Exception as e:
-        return f"Exception occurred: {e}"
+        raise HTTPException(status_code=500, detail=f"{e}")
 
 
 def set_global_context(context_id, embeddings):
